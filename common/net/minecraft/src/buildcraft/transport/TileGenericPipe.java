@@ -34,9 +34,9 @@ import net.minecraft.src.buildcraft.api.PowerProvider;
 import net.minecraft.src.buildcraft.api.SafeTimeTracker;
 import net.minecraft.src.buildcraft.api.TileNetworkData;
 import net.minecraft.src.buildcraft.api.Trigger;
-import net.minecraft.src.buildcraft.api.pipes.IOwnable;
 import net.minecraft.src.buildcraft.core.BlockIndex;
 import net.minecraft.src.buildcraft.core.CoreProxy;
+import net.minecraft.src.buildcraft.core.DefaultProps;
 import net.minecraft.src.buildcraft.core.IDropControlInventory;
 import net.minecraft.src.buildcraft.core.ITileBufferHolder;
 import net.minecraft.src.buildcraft.core.PersistentTile;
@@ -51,8 +51,7 @@ import net.minecraft.src.buildcraft.core.network.PacketUpdate;
 
 public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 		ILiquidContainer, ISpecialInventory, IPipeEntry, ISynchronizedTile,
-		IOverrideDefaultTriggers, ITileBufferHolder, IPipeConnection, IDropControlInventory,
-		IOwnable {
+		IOverrideDefaultTriggers, ITileBufferHolder, IPipeConnection, IDropControlInventory {
 
 	public TileBuffer [] tileBuffer;
 	public boolean [] pipeConnectionsBuffer = new boolean [6];
@@ -65,14 +64,14 @@ public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 
 	@TileNetworkData public int pipeId = -1;
 
-	public TileGenericPipe () {}
+	public TileGenericPipe () {
+
+	}
 
 	@Override
 	public void writeToNBT(NBTTagCompound nbttagcompound) {
 		super.writeToNBT(nbttagcompound);
 
-		if(owner != null && !owner.isEmpty())
-			nbttagcompound.setString("owner", owner);
 		if (pipe != null) {
 			nbttagcompound.setInteger("pipeId", pipe.itemID);
 			pipe.writeToNBT(nbttagcompound);
@@ -83,8 +82,6 @@ public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 	public void readFromNBT(NBTTagCompound nbttagcompound) {
 		super.readFromNBT(nbttagcompound);
 
-		if(nbttagcompound.hasKey("owner"))
-			owner = nbttagcompound.getString("owner");
 		int key = nbttagcompound.getInteger("pipeId");
 		if (key > 0) {
 			pipe = BlockGenericPipe.createPipe(key);
@@ -100,7 +97,7 @@ public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 		if (APIProxy.isServerSide())
 			if (networkSyncTracker.markTimeIfDelay(worldObj, delay))
 				CoreProxy.sendToPlayers(getUpdatePacket(), worldObj, xCoord,
-						yCoord, zCoord, 40, mod_BuildCraftCore.instance);
+						yCoord, zCoord, DefaultProps.NETWORK_UPDATE_RANGE, mod_BuildCraftCore.instance);
 	}
 
 	@Override
@@ -122,26 +119,6 @@ public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 
 	public boolean initialized = false;
 
-	/// OWNERSHIP
-	private String owner;
-	
-	@Override
-	public boolean isSecure() {
-		if(pipe != null)
-			return pipe.isSecure();
-		else
-			return false;
-	}
-	@Override
-	public String getOwnerName() {
-		return owner;
-	}
-	@Override
-	public void setOwner(EntityPlayer player) {
-		owner = player.username;
-	}
-	
-	/// UPDATING
 	@Override
 	public void updateEntity () {
 		if (!initialized) {
@@ -385,6 +362,9 @@ public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 			return false;
 	}
 
+	/**
+	 * Description packets and update packets are handled differently. They should be unified.
+	 */
 	@Override
 	public void handleDescriptionPacket(PacketUpdate packet) {
 		if (pipe == null && packet.payload.intPayload[0] != 0) {
@@ -395,9 +375,11 @@ public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 			if (pipe != null)
 				pipe.initialize();
 			
+			// Check for wire information
+			pipe.handleWirePayload(packet.payload, new IndexInPayload(1, 0, 0));
 			// Check for gate information
-			if(packet.payload.intPayload.length > 1)
-				pipe.handleGatePayload(packet.payload, new IndexInPayload(1, 0, 0));
+			if(packet.payload.intPayload.length > 5)
+				pipe.handleGatePayload(packet.payload, new IndexInPayload(5, 0, 0));
 		}
 	}
 
@@ -423,7 +405,7 @@ public class TileGenericPipe extends TileEntity implements IPowerReceptor,
 		if(pipe != null)
 			packet = new PacketPipeDescription(xCoord, yCoord, zCoord, pipe);
 		else
-			packet = new PacketPipeDescription(xCoord, yCoord, zCoord, 0);
+			packet = new PacketPipeDescription(xCoord, yCoord, zCoord, null);
 
 		return packet.getPacket();
 	}

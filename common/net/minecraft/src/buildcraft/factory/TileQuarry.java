@@ -72,6 +72,7 @@ public class TileQuarry extends TileMachine implements IArmListener,
 	}
 	
     public void createUtilsIfNeeded () {
+    	
     	if (!box.isInitialized() && APIProxy.isClient(worldObj)) {
     		return;
     	}
@@ -120,14 +121,15 @@ public class TileQuarry extends TileMachine implements IArmListener,
 
 	@Override
 	public void updateEntity () {
+		
 		super.updateEntity();
 		
 		if (inProcess && arm != null) {
+			
 			arm.speed = 0;
 			float energyToUse = 2 + powerProvider.energyStored / 1000;
 			
-			float energy = powerProvider
-			.useEnergy(energyToUse, energyToUse, true);
+			float energy = powerProvider.useEnergy(energyToUse, energyToUse, true);
 						
 			if (energy > 0) {
 				arm.doMove(0.015 + energy / 200F);
@@ -135,15 +137,12 @@ public class TileQuarry extends TileMachine implements IArmListener,
 		}
 		
 		if (arm != null) {
+			
 			headPosX = arm.headPosX;
 			headPosY = arm.headPosY;
 			headPosZ = arm.headPosZ;
 			
 			speed = arm.speed;
-		}
-		
-		if (builder != null) {
-			builder.update();
 		}
 	}
 	
@@ -167,6 +166,7 @@ public class TileQuarry extends TileMachine implements IArmListener,
 	    createUtilsIfNeeded();
 	    
 	    if (bluePrintBuilder != null) {
+	    	
 	    	if (!builderDone) {
 	    		// configuration for building phase
 	    		powerProvider.configure(20, 25, 25, 25, MAX_ENERGY);
@@ -188,7 +188,9 @@ public class TileQuarry extends TileMachine implements IArmListener,
 	    		}
 
 	    		return;
+	    		
 	    	} else {
+	    		
 	    		if (builder != null && builder.done ()) {
 	    			box.deleteLasers();
 	    			builder.setDead();
@@ -359,19 +361,6 @@ public class TileQuarry extends TileMachine implements IArmListener,
 		int j = targetY - 1;
 		int k = targetZ;
 		
-		//Collect any lost items laying around
-		AxisAlignedBB axis = AxisAlignedBB.getBoundingBoxFromPool(arm.headPosX - 0.5, arm.headPosY, arm.headPosZ - 0.5, arm.headPosX + 1.5, arm.headPosY + 1.5, arm.headPosZ + 1.5);
-		List result = worldObj.getEntitiesWithinAABB(EntityItem.class, axis);
-		for (int  ii = 0; ii < result.size(); ii++){
-			if (result.get(ii) instanceof EntityItem) {
-				EntityItem entity = (EntityItem) result.get(ii);
-				if (entity.isDead)	continue;
-				if (entity.item.stackSize <= 0) continue;
-				APIProxy.removeEntity(entity);
-				mineStack(entity.item);
-			}
-		}
-		
 		int blockId = worldObj.getBlockId(i, j, k);
 		
 		if (canDig(blockId)) {
@@ -391,7 +380,20 @@ public class TileQuarry extends TileMachine implements IArmListener,
 			}
 					
 			worldObj.setBlockWithNotify(i, j, k, 0);
-		}		
+		}
+		
+		//Collect any lost items laying around
+		AxisAlignedBB axis = AxisAlignedBB.getBoundingBoxFromPool(arm.headPosX - 1.5, arm.headPosY, arm.headPosZ - 1.5, arm.headPosX + 2.5, arm.headPosY + 2.5, arm.headPosZ + 2.5);
+		List result = worldObj.getEntitiesWithinAABB(EntityItem.class, axis);
+		for (int  ii = 0; ii < result.size(); ii++){
+			if (result.get(ii) instanceof EntityItem) {
+				EntityItem entity = (EntityItem) result.get(ii);
+				if (entity.isDead)	continue;
+				if (entity.item.stackSize <= 0) continue;
+				APIProxy.removeEntity(entity);
+				mineStack(entity.item);
+			}
+		}
 	}
 
 	private void mineStack(ItemStack s) {
@@ -535,6 +537,7 @@ public class TileQuarry extends TileMachine implements IArmListener,
 	}
 	
 	private void initializeBluePrintBuilder () {
+		
 		BptBlueprint bluePrint = new BptBlueprint(box.sizeX(), box.sizeY(), box.sizeZ());	
 	
 		for (int i = 0; i < bluePrint.sizeX; ++i) {
